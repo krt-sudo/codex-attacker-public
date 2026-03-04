@@ -1,6 +1,10 @@
+# probe-ts: 20260304T050104Z
 name: token-scope-probe
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 permissions:
   contents: read
 jobs:
