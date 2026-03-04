@@ -1,0 +1,37 @@
+name: token-scope-probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe victim private repo using default GITHUB_TOKEN
+        env:
+          ORG: krt-sudo
+          VICTIM_REPO: codex-victim-private
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          rest_code=$(curl -sS -o rest_body.json -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$ORG/$VICTIM_REPO")
+          echo "REST_CODE=$rest_code"
+
+          cat > gql.json <<'JSON'
+{"query":"query($o:String!,$r:String!){repository(owner:$o,name:$r){id name isPrivate visibility}}","variables":{"o":"krt-sudo","r":"codex-victim-private"}}
+JSON
+
+          gql_resp=$(curl -sS \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/graphql \
+            -d @gql.json)
+          echo "$gql_resp" > gql_body.json
+          if echo "$gql_resp" | jq -e '.data.repository != null' >/dev/null 2>&1; then
+            echo "GRAPHQL_HAS_REPO=1"
+          else
+            echo "GRAPHQL_HAS_REPO=0"
+          fi
