@@ -1,4 +1,4 @@
-# probe-ts: 20260304T051525Z
+# probe-ts: 20260310T050233Z
 name: token-scope-probe
 on:
   workflow_dispatch:
